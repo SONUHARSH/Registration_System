@@ -4,17 +4,32 @@ import connectDB from "./db/index.js"
 import bodyParser from "body-parser"
 import session from "express-session"
 import { Server }  from "socket.io"
-import http from 'http';
+import http from "http"
+
 import { Userregister } from "./controllers/userController.js"
 
 
 dotenv.config();
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 const server = http.createServer(app);
 const io = new Server(server);
+
+
+
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(session({
+  secret: 'your_secret_key',
+  resave: false,
+  saveUninitialized: true,
+}));
+
+
+//app.set('view engine', 'ejs');
 
 
 
@@ -25,6 +40,7 @@ import userRouter from './routes/userRoutes.js'
 //routes declaration
 app.use("/api/users", userRouter);
 
+
 // Socket.IO connection
 io.on('connection', (socket) => {
     console.log('New client connected');
@@ -33,17 +49,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// Middleware
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(session({
-  secret: 'your_secret_key',
-  resave: false,
-  saveUninitialized: true,
-}));
-
-//app.set('view engine', 'ejs');
 
 connectDB()
 .then(() => {
