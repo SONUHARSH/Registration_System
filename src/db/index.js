@@ -1,15 +1,19 @@
+
+
 import mongoose from "mongoose";
-
-
+//import { Userregister } from "../controllers/userController";
 
 const connectDB = async () => {
     try {
-        const connectionInstance = await mongoose.connect(`${process.env.MONGODB_URI}`);
-        console.log(`\n MongoDB connected: ${connectionInstance.connection.host}`);
+        await mongoose.connect(process.env.MONGODB_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+        });
+        console.log("MongoDB connected successfully.");
     } catch (error) {
-        console.log("MONGODB connection FAILED ", error);
-        process.exit(1)
+        console.error("MongoDB connection failed:", error);
+        process.exit(1);
     }
-}
+};
 
-export default connectDB
+export default connectDB;

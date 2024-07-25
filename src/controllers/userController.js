@@ -1,74 +1,88 @@
 
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import { User } from "../models/userModel";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { User } from "../models/userModel.js";
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
-
+import bcrypt from "bcrypt";
 
 const generateToken = async (user) => {
-        try {
-          const payload = {
-            id: user._id,
-            email: user.email,
-          }
-      
-          const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' })
-          return token;
-        } catch (error) {
+  try {
+    const payload = {
+      id: user._id,
+      email: user.email,
+    };
 
-                throw new ApiError(500, "Something went wrong while generating token")
-        }
-}
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+    return token;
+  } catch (error) {
+    throw new ApiError(500, "Something went wrong while generating token");
+  }
+};
 
-const register = async (req, res) => {
+const Userregister = async (req, res) => {
   const { name, email, mobile, avatar, password, description } = req.body;
 
-  if (
-        [name, email, mobile, password, avatar, description].some((field) => field?.trim() === "")
-    ) {
-        throw new ApiError(400, "All fields are required")
+  //console.log('Request body:', req.body);
+
+  if ([name, email, mobile, password].some((field) => field?.trim() === "")) {
+    return res.status(400).json(
+      new ApiResponse(400, null, "All fields are required", false)
+    );
+  }
+
+  try {
+    //console.log('Checking for existing user with email:', email);
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    //console.log('Existing user found:', existingUser);
+
+    if (existingUser) {
+      return res.status(400).json(
+        new ApiResponse(400, null, 'User already exists', false)
+      );
     }
 
-  const createUser = async (req, res) => {
-        const { name, email, mobile, avatar, password, description } = req.body;
-      
-        const newUser = new User({
-          name,
-          email,
-          mobile,
-          avatar,
-          password,
-          description,
-        });
-      
-        try {
+    const newUser = new User({
+      name,
+      email,
+      mobile,
+      avatar,
+      password,
+      description,
+      tokens: []
+    });
 
-           // Save the new user to the database
-          const user = await newUser.save()
-      
-          // Generate a token for the user
-          const token = await generateToken(user)
-      
-          // Add the token to the user's tokens 
-          user.tokens.push(token)
-      
-          // Save the updated user information to the database
-          await user.save()
-      
-          res.status(201).json(
-                new ApiResponse(201, { user, token }, "User registered Successfully")
-          )
-        } catch (error) {
+    //console.log('New user created:', newUser);
 
-                throw new ApiError(500, "Something went wrong while registering the user")
-            }
-   }
+    // Save the new user to the database
+    const user = await newUser.save();
+    //console.log('New user saved:', user);
 
-}
-      
+    // Generate a token for the user
+    const token = await generateToken(user);
+    //console.log('Generated token', token);
 
-const login = async (req, res) => {
+    // Add the token to the user's tokens 
+    user.tokens.push(token);
+    //console.log('User tokens updated:', user.tokens);
+
+    // Save the updated user information to the database
+    await user.save();
+    //console.log('User with tokens saved:', user);
+
+    res.status(201).json(
+      new ApiResponse(201, { user, token }, "User registered successfully", true)
+    );
+  } catch (error) {
+    console.error('Error registering user:', error);
+    res.status(500).json(
+      new ApiResponse(500, null, "Something went wrong while registering the user", false)
+    );
+  }
+};   
+
+const Userlogin = async (req, res) => {
   const { email, password } = req.body;
 
   try {
@@ -123,7 +137,7 @@ const getSessionDetails = async (req, res) => {
 
 export {
         generateToken,
-        register,
-        login,
+        Userregister,
+        Userlogin,
         getSessionDetails
 }
